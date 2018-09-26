@@ -4,70 +4,97 @@
 	<meta charset="utf-8" />
 	<title>Web Audio Visualizer</title>
 	<style>
-	body {
-         background: #eeeeee;
-         font-family: tahoma, verdana, sans serif;
-      }
-
-      canvas {
-        margin-left:10px;
-        margin-top:10px;
-        box-shadow: 4px 4px 8px rgba(0,0,0,0.5);
+	* { margin: 0; padding: 0;}
+	body, html { height:100%; }
+    canvas {
         background: black;
+		position:absolute;
+		width:100%;
+		height:100%;
     }
       
-      #controls{
-      	margin-left:10px;
-        margin-top:10px;
-      }
-	#radiusSlider{
-		-webkit-appearance: none;
-		width: 50%;
-		height: 15px;
-		border-radius: 5px;
-		margin-top: 10px;		
-		background: #d3d3d3;
-		outline: none;
-		opacity: 0.7;
-		-webkit-transition: .2s;
-		transition: opacity .2s;
-	}
+	audio{
+		position: absolute;
+		left: 45%;
 	
-	#radiusSlider::-webkit-slider-thumb {
-		-webkit-appearance: none;
-		appearance: none;
-		width: 25px;
-		height: 25px;
-		border-radius: 50%; 
-		background: #4CAF50;
-		cursor: pointer;
-	}
-	
-	#radiusSlider::-moz-range-thumb {
-		width: 25px;
-		height: 25px;
-		border-radius: 50%;
-		background: #4CAF50;
-		cursor: pointer;
 	}
 	</style>
+	<script type="text/javascript" src="dat.gui.js"></script>
 	<script>
 	// An IIFE ("Iffy") - see the notes in mycourses
 	(function(){
 		"use strict";
+		let Visualizer = function(){
+			//Variables are added to the vis using this._______ and that will be the variable you use elsewhere
+			
+			this.Playing = 'media/New Adventure Theme.mp3';
+			this.SOUND_1 = 'media/New Adventure Theme.mp3';
+			this.SOUND_2 = 'media/Peanuts Theme.mp3';
+			this.SOUND_3 = 'media/The Picard Song.mp3';
+			this.invert = false;
+			this.tintRed = false;
+			this.noise = false;
+			this.GoFullScreen = requestFullscreenOfCanvas;
+			this.Volume = .2;
+			this.Amplitude = 1;
+		}
+		let vis = new Visualizer();
+		window.onload = function() {
+			
+			let gui = new dat.GUI();
+			
+			//Adds a folder section to the GUI
+			let sounds = gui.addFolder('Tracks');
+			
+			//The context we want in our case the visualizer named Vis. 'Playing' is the named variable(this.Playing) from above, the variable name determines the label for the drop down. The value of 
+			//the variable will be the default value out of the the ones listed below (if no value exists it will be blank). Setting up the options like this allows for what appears in the drop down
+			//to be different from the value 'Playing' will get when selected. Playing will change based on the selected option;
+			//
+			let audioChangeController = sounds.add(vis, 'Playing', {New_Adventure_Theme: vis.SOUND_1, Peanuts_Theme: vis.SOUND_2, The_Picard_Song: vis.SOUND_3});		
+			
+			//Set up a controller on the drop down to change audio when the selected option is changed
+			audioChangeController.onChange(function(){ playStream(audioElement,vis.Playing); });
+			
+			//Graph Effects
+			let effectsG = gui.addFolder('Graph Effects');
+			//Adding the two numbers after the value sets up a range slider that has min and max, in this instance .5 and 3 respectively
+			effectsG.add(vis, 'Amplitude', .5,3);
+			
+			//Visual Effects
+			let effectsV = gui.addFolder('Visual Effects');
+			//If the variable being added is a boolean it will create a checkbox
+			effectsV.add(vis, 'invert');
+			effectsV.add(vis, 'tintRed');
+			effectsV.add(vis, 'noise');
+			
+			//AudioEffects
+			let effectsA = gui.addFolder('Audio Effects');
+			let audioVolumeController = effectsA.add(vis, 'Volume', 0,1);
+			
+			audioVolumeController.onChange(function(){ gainNode.gain.value = vis.Volume; });
+			//If the variable being added is a function it creates a section that functions as a button
+			gui.add(vis, 'GoFullScreen');
+			
+		};
 		
 		var NUM_SAMPLES = 256;
-		var SOUND_1 = 'media/New Adventure Theme.mp3';
-		var SOUND_2 = 'media/Peanuts Theme.mp3';
-		var SOUND_3 = 'media/The Picard Song.mp3';
+		//var SOUND_1 = 'media/New Adventure Theme.mp3';
+		//var SOUND_2 = 'media/Peanuts Theme.mp3';
+		//var SOUND_3 = 'media/The Picard Song.mp3';
 		var audioElement;
 		var analyserNode;
 		var canvas,ctx;
-		var invert = false, tintRed = false, noise = false, lines = false;
+		//var invert = false, tintRed = false, noise = false, lines = false;
 		var maxRadius = 200;
+		let canvasW, canvasH;
+		var audioCtx, analyserNode, sourceNode, gainNode;
 		function init(){
 			// set up canvas stuff
 			canvas = document.querySelector('canvas');
+			canvasW = window.innerWidth;
+			canvasH = window.innerHeight;
+			canvas.width = canvasW;
+			canvas.height = canvasH;
 			ctx = canvas.getContext("2d");
 			
 			// get reference to <audio> element on page
@@ -77,10 +104,10 @@
 			analyserNode = createWebAudioContextWithAnalyserNode(audioElement);
 			
 			// get sound track <select> and Full Screen button working
-			setupUI();
+			//setupUI();
 			
 			// load and play default sound into audio element
-			playStream(audioElement,SOUND_1);
+			playStream(audioElement,vis.Playing);
 			
 			// start animation loop
 			update();
@@ -88,7 +115,7 @@
 		
 		
 		function createWebAudioContextWithAnalyserNode(audioElement) {
-			var audioCtx, analyserNode, sourceNode;
+			
 			// create new AudioContext
 			// The || is because WebAudio has not been standardized across browsers yet
 			// http://webaudio.github.io/web-audio-api/#the-audiocontext-interface
@@ -96,6 +123,9 @@
 			
 			// create an analyser node
 			analyserNode = audioCtx.createAnalyser();
+			
+			gainNode = audioCtx.createGain();
+			
 			
 			/*
 			We will request NUM_SAMPLES number of samples or "bins" spaced equally 
@@ -111,50 +141,55 @@
 			
 			// this is where we hook up the <audio> element to the analyserNode
 			sourceNode = audioCtx.createMediaElementSource(audioElement); 
-			sourceNode.connect(analyserNode);
 			
+			sourceNode.connect(gainNode);
+			gainNode.connect(analyserNode);
+			
+			gainNode.gain.value = vis.Volume;
+			
+			console.log(vis.Volume);
 			// here we connect to the destination i.e. speakers
 			analyserNode.connect(audioCtx.destination);
 			return analyserNode;
 		}
-		
-		function setupUI(){
-			document.querySelector("#trackSelect").onchange = function(e){
-				playStream(audioElement,e.target.value);
-			};
-			
-			document.querySelector("#fsButton").onclick = function(){
-				requestFullscreen(canvas);
-			};
-			document.querySelector("#radiusSlider").oninput = function(e){
-				 document.querySelector("#sliderRadius").innerHTML = e.target.value;
-				maxRadius = e.target.value;
-			};
-			document.querySelector("#invertCheck").onchange = function(e){
-				invert = !invert;
-			}
-			document.querySelector("#tintRedCheck").onchange = function(e){
-				tintRed = !tintRed;
-			}
-			document.querySelector("#noiseCheck").onchange = function(e){
-				noise = !noise;
-			}
-			document.querySelector("#linesCheck").onchange = function(e){
-				lines = !lines;
-			}
-		}
+		//Unused
+		//function setupUI(){
+		//	document.querySelector("#trackSelect").onchange = function(e){
+		//		playStream(audioElement,e.target.value);
+		//	};
+		//	
+		//	document.querySelector("#fsButton").onclick = function(){
+		//		requestFullscreen(canvas);
+		//	};
+		//	document.querySelector("#radiusSlider").oninput = function(e){
+		//		 document.querySelector("#sliderRadius").innerHTML = e.target.value;
+		//		maxRadius = e.target.value;
+		//	};
+		//	document.querySelector("#invertCheck").onchange = function(e){
+		//		invert = !invert;
+		//	}
+		//	document.querySelector("#tintRedCheck").onchange = function(e){
+		//		tintRed = !tintRed;
+		//	}
+		//	document.querySelector("#noiseCheck").onchange = function(e){
+		//		noise = !noise;
+		//	}
+		//	document.querySelector("#linesCheck").onchange = function(e){
+		//		lines = !lines;
+		//	}
+		//}
 		
 		function playStream(audioElement,path){
 			audioElement.src = path;
 			audioElement.play();
-			audioElement.volume = 0.2;
-			document.querySelector('#status').innerHTML = "Now playing: " + path;
+			//audioElement.volume = vis.Volume;
+			//document.querySelector('#status').innerHTML = "Now playing: " + path;
 		}
 		
 		function update() { 
 			// this schedules a call to the update() method in 1/60 seconds
 			requestAnimationFrame(update);
-			
+			//gainNode.gain.value = vis.Volume;
 			/*
 				Nyquist Theorem
 				http://whatis.techtarget.com/definition/Nyquist-Theorem
@@ -172,15 +207,15 @@
 			//analyserNode.getByteTimeDomainData(data); // waveform data
 			
 			// DRAW!
-			ctx.clearRect(0,0,800,600);  
-			var barWidth = 4;
+			ctx.clearRect(0,0,canvas.width,canvas.height);  
+			var barWidth = 12;
 			var barSpacing = 1;
-			var barHeight = 100;
-			var topSpacing = 50;
+			var barHeight = 5;
+			var topSpacing = 400;
 			
 			var minLine = 350;
 			var pointSpacing = 5;
-			let gradient = ctx.createLinearGradient(10, 0, 630, 0);
+			let gradient = ctx.createLinearGradient(110, 0, canvasW - 110, 0);
 			gradient.addColorStop(0, 'red');
 			gradient.addColorStop(1 / 6, 'orange');
 			gradient.addColorStop(2 / 6, 'yellow');
@@ -193,42 +228,48 @@
 			for(var i=0; i<data.length; i++) { 								
 				// the higher the amplitude of the sample (bin) the taller the bar
 				// remember we have to draw our bars left-to-right and top-down
-				//ctx.save();
-				//ctx.fillStyle = gradient;
+				ctx.fillStyle = gradient;
+				ctx.save();				
 				//ctx.globalAlpha = .3;
-				ctx.fillStyle = 'rgba(0,255,0,0.6)';
-				ctx.fillRect(i * (barWidth + barSpacing),topSpacing + 256-data[i],barWidth,barHeight); 
-				ctx.fillRect(640 - i * (barWidth + barSpacing),topSpacing + 256-data[i],barWidth,barHeight);
+				ctx.fillRect(100+ i * (barWidth + barSpacing),canvasH / 2,barWidth,(barHeight + (data[i]/2))* vis.Amplitude);
+				ctx.fillRect(100+ i * (barWidth + barSpacing),canvasH / 2,barWidth,(-barHeight - (data[i]/2)) * vis.Amplitude); 
+				ctx.restore();
+				//ctx.fillRect((canvasW - 60) - i * (barWidth + barSpacing),topSpacing + 256-data[i],barWidth,barHeight);
 				//ctx.restore();
-				// red-ish circles
-				var percent = data[i] / 255;
 				
-				var circleRadius = percent * maxRadius;
-				ctx.beginPath();
-				ctx.fillStyle= makeColor(255, 111, 111, .34 - percent/3.0);
-				ctx.arc(canvas.width/2, canvas.height/2, circleRadius , 0, 2 *
-				Math.PI, false);
-				ctx.fill();
-				ctx.closePath();
-				// blue-ish circles, bigger, more transparent
-				ctx.beginPath();
-				ctx.fillStyle= makeColor(0, 0, 255, .10 - percent/10.0 );
-				ctx.arc(canvas.width/2, canvas.height/2, circleRadius * 1.5, 0, 2 *
-				Math.PI, false);
-				ctx.fill();
-				ctx.closePath();
-				// yellow-ish circles, smaller
-				ctx.save();
-				ctx.beginPath();
-				ctx.fillStyle = makeColor(200, 200, 0, .5 - percent/5.0);
-				ctx.arc(canvas.width/2, canvas.height/2, circleRadius * .50, 0, 2 *
-				Math.PI, false);
-				ctx.fill();
-				ctx.closePath();
-				ctx.restore();				
+				
+				/////CIRCLES REMOVED FOR NOW
+				
+				// red-ish circles
+				//var percent = data[i] / 255;
+				//var circleRadius = percent * maxRadius;
+				//ctx.beginPath();
+				//ctx.fillStyle= makeColor(255, 111, 111, .34 - percent/3.0);
+				//ctx.arc(canvas.width/2, canvas.height/2, circleRadius , 0, 2 *
+				//Math.PI, false);
+				//ctx.fill();
+				//ctx.closePath();
+				//// blue-ish circles, bigger, more transparent
+				//ctx.beginPath();
+				//ctx.fillStyle= makeColor(0, 0, 255, .10 - percent/10.0 );
+				//ctx.arc(canvas.width/2, canvas.height/2, circleRadius * 1.5, 0, 2 *
+				//Math.PI, false);
+				//ctx.fill();
+				//ctx.closePath();
+				//// yellow-ish circles, smaller
+				//ctx.save();
+				//ctx.beginPath();
+				//ctx.fillStyle = makeColor(200, 200, 0, .5 - percent/5.0);
+				//ctx.arc(canvas.width/2, canvas.height/2, circleRadius * .50, 0, 2 *
+				//Math.PI, false);
+				//ctx.fill();
+				//ctx.closePath();
+				//ctx.restore();				
 			}
 			
-						
+			////
+			////Line Visualizer
+			////
 			//ctx.save();
 			//ctx.globalAlpha = .6;
 			//ctx.beginPath();			
@@ -275,7 +316,18 @@
 			}
 			// .. and do nothing if the method is not supported
 		};
-		
+		function requestFullscreenOfCanvas() {
+			if (canvas.requestFullscreen) {
+			  canvas.requestFullscreen();
+			} else if (canvas.mozRequestFullscreen) {
+			  canvas.mozRequestFullscreen();
+			} else if (canvas.mozRequestFullScreen) { // camel-cased 'S' was changed to 's' in spec
+			  canvas.mozRequestFullScreen();
+			} else if (canvas.webkitRequestFullscreen) {
+			  canvas.webkitRequestFullscreen();
+			}
+			// .. and do nothing if the method is not supported
+		};
 			function manipulatePixels(){
 			// i) Get all of the rgba pixel data of the canvas by grabbing the
 			// ImageData Object
@@ -297,36 +349,24 @@
 			for (var i = 0; i < length; i += 4){
 				// iv) increase red value only
 				
-				if(tintRed){
+				if(vis.tintRed){
 					// just the red channel this time
 					data[i] = data[i] + 100;
 				}
 				
-				if(invert){
+				if(vis.invert){
 					var red = data[i], green = data[i+1], blue = data[i+2];
 					data[i] = 255 - red; // set red value
 					data[i+1] = 255 - green; // set blue value
 					data[i+2] = 255 - blue; // set green value
 					// data[i+3] is the alpha but we’re leaving that alone
 				}
-				if (noise && Math.random() < .10){
+				if (vis.noise && Math.random() < .10){
 					data[i] = data[i +1] = data[i+2] = 128; // gray noise
 					//data[i] = data[i +1] = data[i+2] = 255; // or white noise
 					//data[i] = data[i +1] = data[i+2] = 0; // or black noise
 					data[i+3] = 255; // alpha
-				}
-				if (lines){
-					var row = Math.floor(i/4/width);
-					if (row % 50 == 0){
-						// this row
-						data[i] = data[i +1] = data[i+2] = data[i+3] = 255;
-						// next row
-						data[i+ (width*4)] =
-						data[i +(width*4) + 1] =
-						data[i + (width*4) +2] =
-						data[i + (width*4) +3] = 255;
-					}
-				}
+				}				
 
 			}
 			// put the modified data back on the canvas
@@ -343,6 +383,7 @@
 	<canvas id="canvas" width="640" height="400"></canvas>
 	<div id="controls">
 		<audio controls loop></audio>
+		<!--
 		<label>Track: 
 			<select id="trackSelect" >
 				<option value="media/New Adventure Theme.mp3">New Adventure Theme</option>
@@ -373,6 +414,7 @@
 			<input type="checkbox" id="linesCheck">
 		</span>
 		<p id="status">???</p>
+		-->
 	</div>
 </body>
 </html>
