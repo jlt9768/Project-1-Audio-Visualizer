@@ -27,10 +27,13 @@
 		let Visualizer = function(){
 			//Variables are added to the vis using this._______ and that will be the variable you use elsewhere
 			
-			this.Playing = 'media/New Adventure Theme.mp3';
-			this.SOUND_1 = 'media/New Adventure Theme.mp3';
-			this.SOUND_2 = 'media/Peanuts Theme.mp3';
-			this.SOUND_3 = 'media/The Picard Song.mp3';
+			this.Playing = 'media/Something_Elated.mp3';
+			// Source: http://freemusicarchive.org/music/Broke_For_Free/Something_EP/Broke_For_Free_-_Something_EP_-_05_Something_Elated
+			this.SOUND_1 = 'media/Something_Elated.mp3';
+			// Source: http://freemusicarchive.org/music/BoxCat_Games/Nameless_the_Hackers_RPG_Soundtrack/BoxCat_Games_-_Nameless-_the_Hackers_RPG_Soundtrack_-_10_Epic_Song
+			this.SOUND_2 = 'media/Epic_Song.mp3';
+			// Source: http://freemusicarchive.org/music/Jahzzar/Travellers_Guide/Siesta
+			this.SOUND_3 = 'media/Siesta.mp3';
 			this.invert = false;
 			this.tintRed = false;
 			this.noise = false;
@@ -50,7 +53,7 @@
 			//the variable will be the default value out of the the ones listed below (if no value exists it will be blank). Setting up the options like this allows for what appears in the drop down
 			//to be different from the value 'Playing' will get when selected. Playing will change based on the selected option;
 			//
-			let audioChangeController = sounds.add(vis, 'Playing', {New_Adventure_Theme: vis.SOUND_1, Peanuts_Theme: vis.SOUND_2, The_Picard_Song: vis.SOUND_3});		
+			let audioChangeController = sounds.add(vis, 'Playing', {Something_Elated: vis.SOUND_1, Epic_Song: vis.SOUND_2, Siesta: vis.SOUND_3});		
 			
 			//Set up a controller on the drop down to change audio when the selected option is changed
 			audioChangeController.onChange(function(){ playStream(audioElement,vis.Playing); });
