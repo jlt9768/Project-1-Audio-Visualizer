@@ -37,6 +37,7 @@
 			this.Invert = false;
 			this.Tint_Red = false;
 			this.Noise = false;
+			this.Data_Type = "Frequency";
 			this.Visualizer_Type = "Bars";
 			this.GoFullScreen = requestFullscreenOfCanvas;
 			this.Volume = .2;
@@ -63,6 +64,8 @@
 			let effectsG = gui.addFolder('Graph Effects');
 			//Adding the two numbers after the value sets up a range slider that has min and max, in this instance .5 and 3 respectively
 			effectsG.add(vis, 'Amplitude', .5,3);
+			effectsG.add(vis, 'Data_Type', {Frequency: "Frequency", Waveform: "Waveform"});
+			effectsG.add(vis, 'Visualizer_Type', {Bar: "Bars", Lines: "Lines", Circles: "Circles", All: "All"});
 			
 			//Visual Effects
 			let effectsV = gui.addFolder('Visual Effects');
@@ -70,7 +73,6 @@
 			effectsV.add(vis, 'Invert');
 			effectsV.add(vis, 'Tint_Red');
 			effectsV.add(vis, 'Noise');
-			effectsV.add(vis, 'Visualizer_Type', {Bar: "Bars", Lines: "Lines", Circles: "Circles", All: "All"});
 			
 			//AudioEffects
 			let effectsA = gui.addFolder('Audio Effects');
@@ -205,10 +207,14 @@
 			
 			// populate the array with the frequency data
 			// notice these arrays can be passed "by reference" 
-			analyserNode.getByteFrequencyData(data);
-		
-			// OR
-			//analyserNode.getByteTimeDomainData(data); // waveform data
+			if (vis.Data_Type == "Frequency")
+			{
+				analyserNode.getByteFrequencyData(data);
+			}
+			else
+			{
+				analyserNode.getByteTimeDomainData(data); // waveform data
+			}
 			
 			// DRAW!
 			ctx.clearRect(0,0,canvas.width,canvas.height);  
