@@ -223,7 +223,7 @@
 			var barHeight = 5;
 			var topSpacing = 400;
 			
-			var minLine = canvasH / 2;
+			var minLine = canvasH / (2 * vis.Amplitude);
 			var pointSpacing = canvasW / data.length;
 			let gradient = ctx.createLinearGradient(110, 0, canvasW - 110, 0);
 			gradient.addColorStop(0, 'red');
@@ -242,8 +242,8 @@
 				{
 					ctx.fillStyle = gradient;
 					ctx.save();				
-					ctx.fillRect(i * (barWidth + barSpacing),minLine,barWidth,(barHeight + (data[i]/2))* vis.Amplitude);
-					ctx.fillRect(i * (barWidth + barSpacing),minLine,barWidth,(-barHeight - (data[i]/2)) * vis.Amplitude); 
+					ctx.fillRect(i * (barWidth + barSpacing),canvasH / 2,barWidth,(barHeight + (data[i]/2))* vis.Amplitude);
+					ctx.fillRect(i * (barWidth + barSpacing),canvasH / 2,barWidth,(-barHeight - (data[i]/2)) * vis.Amplitude); 
 					ctx.restore();
 				}
 				
