@@ -1,11 +1,15 @@
 Need to do:
-- change up checkboxes - James
+- change up checkboxes - James 
 - bezier curves - Beau
-- additinal seperation rates - James
 - additional audio node effect - Beau
 - Names with embedded font - Beau
-- dat.gui credits - James
+
 
 Nice to have:
 - mouse interaction - If someone has extra time
+
+
+Done:
+- additinal seperation rates - James
+- dat.gui credits - James
 - Starfield - James
