@@ -39,6 +39,7 @@
 			this.SOUND_4 = 'media/Skyhawk_Beach';
 			// Source: http://freemusicarchive.org/music/Nublar/Inmerso/Nublar_-_Inmerso_-_02_Inmerso
 			this.SOUND_5 = 'media/Inmerso';
+			
 			this.Invert = false;
 			this.Tint = false;
 			this.Noise = false;
@@ -49,8 +50,6 @@
 			this.Amplitude = 1;
 			this.Tint_Color = [255,255,255];
 			this.Num_Samples = 256;
-			this.GBR = false;
-			this.BRG = false;
 			
 			this.colorProperties = {
 				RGB: true,
@@ -85,12 +84,16 @@
 			effectsG.add(vis, 'Visualizer_Type', {Bar: "Bars", Lines: "Lines", Circles: "Circles", All: "All"});
 			
 			//Visual Effects
-			let effectsV = gui.addFolder('Visual Effects');
-			//If the variable being added is a boolean it will create a checkbox
+			let effectsV = gui.addFolder('Visual Effects');		
 			let effectsTint = effectsV.addFolder('Tint');
+			//If the variable being added is a boolean it will create a checkbox
 			effectsTint.add(vis, 'Tint');
 			effectsTint.addColor(vis, 'Tint_Color');
+			
+			//Color Flip folder for "radio buttons"
 			let effectsFlip = effectsV.addFolder("Color Flip");
+			
+			//Another way of adding a new area to the dat.gui and adding a listner to that
 			effectsFlip.add(vis.colorProperties, 'RGB').name("RGB").listen().onChange(function(){setChecked('RGB')});
 			effectsFlip.add(vis.colorProperties, 'GBR').name("GBR").listen().onChange(function(){setChecked('GBR')});
 			effectsFlip.add(vis.colorProperties, 'BRG').name("BRG").listen().onChange(function(){setChecked('BRG')});
@@ -102,10 +105,13 @@
 			let effectsA = gui.addFolder('Audio Effects');
 			let audioVolumeController = effectsA.add(vis, 'Volume', 0,1);
 			
+			//Add a listner to a button on the dat.gui
 			audioVolumeController.onChange(function(){ gainNode.gain.value = vis.Volume; });
+			
 			//If the variable being added is a function it creates a section that functions as a button
 			gui.add(vis, 'GoFullScreen');
 		};
+		//Sets the selected color flip value, makes checkboxes act as radio buttons
 		function setChecked(clicked){
 			for(let prop in vis.colorProperties){
 				vis.colorProperties[prop] = false;
@@ -113,13 +119,12 @@
 			vis.colorProperties[clicked] = true;
 		};
 		
-		var audioElement;
-		var analyserNode;
-		var canvas,ctx;
-		//var invert = false, tintRed = false, noise = false, lines = false;
-		var maxRadius = 100;
+		let audioElement;
+		let analyserNode;
+		let canvas,ctx;
+		let maxRadius = 100;
 		let canvasW, canvasH;
-		var audioCtx, analyserNode, sourceNode, gainNode;
+		let audioCtx, sourceNode, gainNode;
 		let stars = [];
 		function init(){
 			// set up canvas stuff
@@ -134,10 +139,7 @@
 			audioElement = document.querySelector('audio');
 			
 			// call our helper function and get an analyser node
-			analyserNode = createWebAudioContextWithAnalyserNode(audioElement);
-			
-			// get sound track <select> and Full Screen button working
-			//setupUI();
+			analyserNode = createWebAudioContextWithAnalyserNode(audioElement);			
 			
 			// load and play default sound into audio element
 			playStream(audioElement,vis.Playing);
@@ -205,7 +207,7 @@
 			
      
 			// create a new array of 8-bit integers (0-255)
-			var data = new Uint8Array(vis.Num_Samples/2); 
+			let data = new Uint8Array(vis.Num_Samples/2); 
 			let wData = new Uint8Array(vis.Num_Samples/2); 
 			// populate the array with the frequency data
 			// notice these arrays can be passed "by reference" 
@@ -225,6 +227,7 @@
 			
 			
 			for(let i=0; i<data.length; i++) {
+				//White circles 
 				let percent = data[i] / 255;
 				let circleRadius = percent * maxRadius;
 				ctx.beginPath();
@@ -233,14 +236,14 @@
 				Math.PI, false);
 				ctx.fill();
 				ctx.closePath();
-				// blue-ish circles, bigger, more transparent
+				//Blue-ish circles, bigger, more transparent
 				ctx.beginPath();
 				ctx.fillStyle= makeColor(0, 0, 155, .05- percent/20.0 );
 				ctx.arc(canvas.width/2, canvas.height/2, circleRadius * 2, 0, 2 *
 				Math.PI, false);
 				ctx.fill();
 				ctx.closePath();
-				// yellow-ish circles, smaller
+				//Yellow-ish circles, smaller
 				ctx.save();
 				ctx.beginPath();
 				ctx.fillStyle = makeColor(200, 200, 0, .4 - percent/5.0);
@@ -288,14 +291,14 @@
 			}
 			//
 			
-				
-			var barWidth = 12 * (256/vis.Num_Samples);
-			var barSpacing = 1;
-			var barHeight = 5;
-			var topSpacing = 400;
+			//Graph variables
+			let barWidth = 12 * (256/vis.Num_Samples);
+			let barSpacing = 1;
+			let barHeight = 5;
+			let topSpacing = 400;
 			
-			var minLine = canvasH / (2 * vis.Amplitude);
-			var pointSpacing = canvasW / data.length;
+			let minLine = canvasH / (2 * vis.Amplitude);
+			let pointSpacing = canvasW / data.length;
 			let gradient = ctx.createLinearGradient(110, 0, canvasW - 110, 0);
 			gradient.addColorStop(0, 'red');
 			gradient.addColorStop(1 / 6, 'orange');
@@ -307,7 +310,7 @@
 			
 			// loop through the data and draw!
 			
-			for(var i=0; i<data.length; i++) { 								
+			for(let i=0; i<data.length; i++) { 								
 				// the higher the amplitude of the sample (bin) the taller the bar
 				// remember we have to draw our bars left-to-right and top-down
 				if (vis.Visualizer_Type == "Bars" || vis.Visualizer_Type == "All")
@@ -377,7 +380,7 @@
 		
 		// HELPER
 		function makeColor(red, green, blue, alpha){
-   			var color='rgba('+red+','+green+','+blue+', '+alpha+')';
+   			let color='rgba('+red+','+green+','+blue+', '+alpha+')';
    			return color;
 		};
 		
@@ -412,21 +415,21 @@
 			// i) Get all of the rgba pixel data of the canvas by grabbing the
 			// ImageData Object
 			// https://developer.mozilla.org/en-US/docs/Web/API/ImageData
-			var imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+			let imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
 			// ii) imageData.data is an 8-bit typed array - values range from 0-255
 			// imageData.data contains 4 values per pixel: 4 x canvas.width x
 			// canvas.height = 1024000 values!
 			// we’re looping through this 60 FPS - wow!
-			var data = imageData.data;
-			var length = data.length;
-			var width = imageData.width;
+			let data = imageData.data;
+			let length = data.length;
+			let width = imageData.width;
 			// iii) Iterate through each pixel
 			// we step by 4 so that we can manipulate 1 pixel per iteration
 			// data[i] is the red value
 			// data[i+1] is the green value
 			// data[i+2] is the blue value
 			// data[i+3] is the alpha value
-			for (var i = 0; i < length; i += 4){
+			for (let i = 0; i < length; i += 4){
 				// iv) increase red value only
 				
 				if(vis.Tint){
@@ -436,7 +439,7 @@
 				};
 				
 				if(vis.Invert){
-					var red = data[i], green = data[i+1], blue = data[i+2];
+					let red = data[i], green = data[i+1], blue = data[i+2];
 					data[i] = 255 - red; // set red value
 					data[i+1] = 255 - green; // set blue value
 					data[i+2] = 255 - blue; // set green value
@@ -490,38 +493,6 @@
 	<canvas id="canvas" width="640" height="400"></canvas>
 	<div id="controls">
 		<audio controls loop></audio>
-		<!--
-		<label>Track: 
-			<select id="trackSelect" >
-				<option value="media/New Adventure Theme.mp3">New Adventure Theme</option>
-				<option value="media/Peanuts Theme.mp3">Peanuts Theme</option>
-				<option value="media/The Picard Song.mp3">The Picard Song</option>
-			</select>
-		</label>
-		<button id="fsButton">Go Full Screen</button><br>
-		<div>
-			<label for="radiusSlider">Maximum radius</label>
-			<input id="radiusSlider" type ="range" min ="50" max="200" step ="1" value ="200"/>
-			<span id="sliderRadius">200</span>
-		</div>
-		<span>
-			<label for="invertCheck">Invert</label>
-			<input type="checkbox" id="invertCheck">
-		</span>
-		<span>
-			<label for="tintRedCheck">Tint Red</label>
-			<input type="checkbox" id="tintRedCheck">
-		</span>
-		<span>
-			<label for="noiseCheck">Noise</label>
-			<input type="checkbox" id="noiseCheck">
-		</span>
-		<span>
-			<label for="linesCheck">Lines</label>
-			<input type="checkbox" id="linesCheck">
-		</span>
-		<p id="status">???</p>
-		-->
 	</div>
 </body>
 </html>
