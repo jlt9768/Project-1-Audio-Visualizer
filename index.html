@@ -49,6 +49,15 @@
 			this.Amplitude = 1;
 			this.Tint_Color = [255,255,255];
 			this.Num_Samples = 256;
+			this.GBR = false;
+			this.BRG = false;
+			
+			this.colorProperties = {
+				RGB: true,
+				GBR: false,
+				BRG: false
+			
+			};
 		}
 		let vis = new Visualizer();
 		window.onload = function() {
@@ -81,11 +90,13 @@
 			let effectsTint = effectsV.addFolder('Tint');
 			effectsTint.add(vis, 'Tint');
 			effectsTint.addColor(vis, 'Tint_Color');
+			let effectsFlip = effectsV.addFolder("Color Flip");
+			effectsFlip.add(vis.colorProperties, 'RGB').name("RGB").listen().onChange(function(){setChecked('RGB')});
+			effectsFlip.add(vis.colorProperties, 'GBR').name("GBR").listen().onChange(function(){setChecked('GBR')});
+			effectsFlip.add(vis.colorProperties, 'BRG').name("BRG").listen().onChange(function(){setChecked('BRG')});
+			
 			effectsV.add(vis, 'Invert');
-			
-			
 			effectsV.add(vis, 'Noise');
-			
 			
 			//AudioEffects
 			let effectsA = gui.addFolder('Audio Effects');
@@ -95,12 +106,18 @@
 			//If the variable being added is a function it creates a section that functions as a button
 			gui.add(vis, 'GoFullScreen');
 		};
+		function setChecked(clicked){
+			for(let prop in vis.colorProperties){
+				vis.colorProperties[prop] = false;
+			};
+			vis.colorProperties[clicked] = true;
+		};
 		
 		var audioElement;
 		var analyserNode;
 		var canvas,ctx;
 		//var invert = false, tintRed = false, noise = false, lines = false;
-		var maxRadius = 200;
+		var maxRadius = 100;
 		let canvasW, canvasH;
 		var audioCtx, analyserNode, sourceNode, gainNode;
 		let stars = [];
@@ -124,6 +141,9 @@
 			
 			// load and play default sound into audio element
 			playStream(audioElement,vis.Playing);
+			
+			//Allows for the audio to be paused and played by clicking on the canvas itself
+			canvas.onclick = onClick;
 			
 			// start animation loop
 			update();
@@ -171,8 +191,6 @@
 		function playStream(audioElement,path){
 			audioElement.src = path;
 			audioElement.play();
-			//audioElement.volume = vis.Volume;
-			//document.querySelector('#status').innerHTML = "Now playing: " + path;
 		};
 		
 		function update() { 
@@ -203,16 +221,51 @@
 			// DRAW!
 			ctx.clearRect(0,0,canvas.width,canvas.height);  
 			
+			
+			
+			
+			for(let i=0; i<data.length; i++) {
+				let percent = data[i] / 255;
+				let circleRadius = percent * maxRadius;
+				ctx.beginPath();
+				ctx.fillStyle= makeColor(255, 255, 255, .23 - percent/3.0);
+				ctx.arc(canvas.width/2, canvas.height/2, circleRadius * 1.5 , 0, 2 *
+				Math.PI, false);
+				ctx.fill();
+				ctx.closePath();
+				// blue-ish circles, bigger, more transparent
+				ctx.beginPath();
+				ctx.fillStyle= makeColor(0, 0, 155, .05- percent/20.0 );
+				ctx.arc(canvas.width/2, canvas.height/2, circleRadius * 2, 0, 2 *
+				Math.PI, false);
+				ctx.fill();
+				ctx.closePath();
+				// yellow-ish circles, smaller
+				ctx.save();
+				ctx.beginPath();
+				ctx.fillStyle = makeColor(200, 200, 0, .4 - percent/5.0);
+				ctx.arc(canvas.width/2, canvas.height/2, circleRadius, 0, 2 *
+				Math.PI, false);
+				ctx.fill();
+				ctx.closePath();
+				ctx.restore();		
+			};
+			
+			
+			
 			//Starfield
+			//Code based off of example obtained from here http://slicker.me/javascript/starfield.htm
+			//I added the ability for stars to be randomly colored, fade in as they get closer to the center of the screen using the globalAlpha,
+			//for the stars to pulse with the waveform data, and to effect the entire page
 			if (stars.length<vis.Num_Samples/2&&Math.random()<.5){ 
-			let star = {
-				x:0,
-				y:0,
-				velocityX:-5+Math.random()*10,
-				velocityY:-5+Math.random()*10,
-				color: [(Math.random()*255),(Math.random()*255),(Math.random()*255)]
-			}
-			stars.push(star);
+				let star = {
+					x:0,
+					y:0,
+					velocityX:-5+Math.random()*10,
+					velocityY:-5+Math.random()*10,
+					color: [(Math.random()*255),(Math.random()*255),(Math.random()*255)]
+				}
+				stars.push(star);
 			}
 			for(let i=0;i<stars.length;i++){
 				ctx.save();			
@@ -225,7 +278,11 @@
 				ctx.globalAlpha = (Math.abs(stars[i].x/(canvasW/2))/2 + Math.abs(stars[i].y/(canvasH/2))/2) + .1;
 				ctx.fillStyle = 'rgb('+stars[i].color[0]+','+stars[i].color[1]+','+stars[i].color[2]+')';
 				ctx.beginPath();
-				ctx.arc(canvasW/2+stars[i].x, canvasH/2+stars[i].y, (Math.abs(stars[i].y/100+i/200))*(Math.pow(wData[i], 2)/5000), 0, 2 * Math.PI);
+				let radius = (Math.abs(stars[i].y/100+i/200))*(Math.pow(wData[i], 2)/5000);
+				if(radius > 12){
+					radius = 12;
+				};
+				ctx.arc(canvasW/2+stars[i].x, canvasH/2+stars[i].y, radius , 0, 2 * Math.PI);
 				ctx.fill();
 				ctx.restore();
 			}
@@ -281,33 +338,8 @@
 					ctx.restore(); 
 				};
 				
-				/////CIRCLES REMOVED FOR NOW
 				
-				// red-ish circles
-				//var percent = data[i] / 255;
-				//var circleRadius = percent * maxRadius;
-				//ctx.beginPath();
-				//ctx.fillStyle= makeColor(255, 111, 111, .34 - percent/3.0);
-				//ctx.arc(canvas.width/2, canvas.height/2, circleRadius , 0, 2 *
-				//Math.PI, false);
-				//ctx.fill();
-				//ctx.closePath();
-				//// blue-ish circles, bigger, more transparent
-				//ctx.beginPath();
-				//ctx.fillStyle= makeColor(0, 0, 255, .10 - percent/10.0 );
-				//ctx.arc(canvas.width/2, canvas.height/2, circleRadius * 1.5, 0, 2 *
-				//Math.PI, false);
-				//ctx.fill();
-				//ctx.closePath();
-				//// yellow-ish circles, smaller
-				//ctx.save();
-				//ctx.beginPath();
-				//ctx.fillStyle = makeColor(200, 200, 0, .5 - percent/5.0);
-				//ctx.arc(canvas.width/2, canvas.height/2, circleRadius * .50, 0, 2 *
-				//Math.PI, false);
-				//ctx.fill();
-				//ctx.closePath();
-				//ctx.restore();				
+						
 			}
 			
 			
@@ -338,7 +370,7 @@
 				};
 				ctx.stroke();
 				ctx.restore();
-			}
+			};
 			
 			manipulatePixels();
 		};
@@ -359,9 +391,11 @@
 			  element.mozRequestFullScreen();
 			} else if (element.webkitRequestFullscreen) {
 			  element.webkitRequestFullscreen();
-			}
+			};
 			// .. and do nothing if the method is not supported
 		};
+		
+		//Allows for only the audio visualizer to be seen in full screen
 		function requestFullscreenOfCanvas() {
 			if (canvas.requestFullscreen) {
 			  canvas.requestFullscreen();
@@ -371,10 +405,10 @@
 			  canvas.mozRequestFullScreen();
 			} else if (canvas.webkitRequestFullscreen) {
 			  canvas.webkitRequestFullscreen();
-			}
+			};
 			// .. and do nothing if the method is not supported
 		};
-			function manipulatePixels(){
+		function manipulatePixels(){
 			// i) Get all of the rgba pixel data of the canvas by grabbing the
 			// ImageData Object
 			// https://developer.mozilla.org/en-US/docs/Web/API/ImageData
@@ -399,7 +433,7 @@
 					data[i] = data[i] + (vis.Tint_Color[0] / 2);
 					data[i+1] = data[i+1] + (vis.Tint_Color[1] / 2);
 					data[i+2] = data[i+2] + (vis.Tint_Color[2] / 2);
-				}
+				};
 				
 				if(vis.Invert){
 					var red = data[i], green = data[i+1], blue = data[i+2];
@@ -407,19 +441,45 @@
 					data[i+1] = 255 - green; // set blue value
 					data[i+2] = 255 - blue; // set green value
 					// data[i+3] is the alpha but we’re leaving that alone
-				}
+				};
 				if (vis.Noise && Math.random() < .10){
 					data[i] = data[i +1] = data[i+2] = 128; // gray noise
 					//data[i] = data[i +1] = data[i+2] = 255; // or white noise
 					//data[i] = data[i +1] = data[i+2] = 0; // or black noise
 					data[i+3] = 255; // alpha
-				}				
+				};
+				if(vis.colorProperties.GBR){
+					let hold0 = data[i]
+					let hold1 = data[i+1];
+					let hold2 = data[i+2];
+					
+					data[i] = hold1;
+					data[i+1] = hold2;
+					data[i+2] = hold0;
+				}
+				if(vis.colorProperties.BRG){
+					let hold0 = data[i]
+					let hold1 = data[i+1];
+					let hold2 = data[i+2];
+					
+					data[i] = hold2;
+					data[i+1] = hold0;
+					data[i+2] = hold1;
+				}
 
 			}
 			// put the modified data back on the canvas
 			ctx.putImageData(imageData, 0, 0);
 		};
-
+		
+		//Pauses or plays the audio based on the current state of the audioElement
+		function onClick(){
+			if(audioElement.paused){
+				audioElement.play();
+				return;
+			};
+			audioElement.pause();
+		};
 		
 		window.addEventListener("load",init);
 	}());
