@@ -16,9 +16,16 @@
 	audio{
 		position: absolute;
 		left: 45%;
+	}
 	
+	#credits{
+		font-family: 'Righteous', cursive;
+		position: absolute;
+		bottom: 0;
+		color: white;
 	}
 	</style>
+	<link href="https://fonts.googleapis.com/css?family=Righteous" rel="stylesheet"> 
 	<!-- Source: https://github.com/dataarts/dat.gui-->
 	<script type="text/javascript" src="dat.gui.js"></script>
 	<script>
@@ -326,6 +333,7 @@
 				{
 					ctx.save();   
 					ctx.lineWidth = "1px";  
+					ctx.fillStyle = gradient;
 					
 					ctx.beginPath();
 					ctx.arc(i * (barWidth + barSpacing), (minLine + (data[i]/2)) * vis.Amplitude, barWidth, 0, Math.PI * 2, false); 
@@ -494,5 +502,6 @@
 	<div id="controls">
 		<audio controls loop></audio>
 	</div>
+	<p id="credits">Created By: James Troup, Beau Marwaha</p>
 </body>
 </html>

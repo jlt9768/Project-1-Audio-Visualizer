@@ -1,7 +1,6 @@
 Need to do:
 - bezier curves - Beau
 - additional audio node effect - Beau
-- Names with embedded font - Beau
 
 
 Nice to have:
@@ -14,3 +13,4 @@ Done:
 - Starfield - James
 - mouse interaction - James
 - change up checkboxes - James 
+- Names with embedded font - Beau
