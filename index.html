@@ -4,27 +4,28 @@
 	<meta charset="utf-8" />
 	<title>Web Audio Visualizer</title>
 	<style>
-	* { margin: 0; padding: 0;}
-	body, html { height:100%; }
-    canvas {
-        background: black;
-		position:absolute;
-		width:100%;
-		height:100%;
-    }
-      
-	audio{
-		position: absolute;
-		left: 45%;
-	}
-	
-	#credits{
-		font-family: 'Righteous', cursive;
-		position: absolute;
-		bottom: 0;
-		color: white;
-	}
+		* { margin: 0; padding: 0;}
+		body, html { height:100%; }
+		canvas {
+			background: black;
+			position:absolute;
+			width:100%;
+			height:100%;
+		}
+		
+		audio{
+			position: absolute;
+			left: 45%;
+		}
+		
+		#credits{
+			font-family: 'Righteous', cursive;
+			position: absolute;
+			bottom: 0;
+			color: white;
+		}
 	</style>
+	<!-- Google Righteous Embedded Font -->
 	<link href="https://fonts.googleapis.com/css?family=Righteous" rel="stylesheet"> 
 	<!-- Source: https://github.com/dataarts/dat.gui-->
 	<script type="text/javascript" src="dat.gui.js"></script>
@@ -50,6 +51,8 @@
 			this.Invert = false;
 			this.Tint = false;
 			this.Noise = false;
+			this.Quadratic_Curves = true;
+			this.Bezier_Curves = true;
 			this.Data_Type = "Frequency";
 			this.Visualizer_Type = "Bars";
 			this.GoFullScreen = requestFullscreenOfCanvas;
@@ -88,8 +91,10 @@
 			effectsG.add(vis, 'Amplitude', .5,3);
 			effectsG.add(vis, 'Num_Samples', [32,64,128,256]);
 			effectsG.add(vis, 'Data_Type', {Frequency: "Frequency", Waveform: "Waveform"});
-			effectsG.add(vis, 'Visualizer_Type', {Bar: "Bars", Lines: "Lines", Circles: "Circles", All: "All"});
-			
+			effectsG.add(vis, 'Visualizer_Type', {Bar: "Bars", Lines: "Lines", Quadratic_Curve: "Quadratic_Curve", Bezier_Curve: "Bezier_Curve", Circles: "Circles", All: "All"});
+			effectsG.add(vis, 'Quadratic_Curves');
+			effectsG.add(vis, 'Bezier_Curves');
+
 			//Visual Effects
 			let effectsV = gui.addFolder('Visual Effects');		
 			let effectsTint = effectsV.addFolder('Tint');
@@ -212,7 +217,6 @@
 				The array of data we get back is 1/2 the size of the sample rate 
 			*/
 			
-     
 			// create a new array of 8-bit integers (0-255)
 			let data = new Uint8Array(vis.Num_Samples/2); 
 			let wData = new Uint8Array(vis.Num_Samples/2); 
@@ -229,9 +233,6 @@
 			analyserNode.getByteTimeDomainData(wData)
 			// DRAW!
 			ctx.clearRect(0,0,canvas.width,canvas.height);  
-			
-			
-			
 			
 			for(let i=0; i<data.length; i++) {
 				//White circles 
@@ -260,8 +261,6 @@
 				ctx.closePath();
 				ctx.restore();		
 			};
-			
-			
 			
 			//Starfield
 			//Code based off of example obtained from here http://slicker.me/javascript/starfield.htm
@@ -296,8 +295,7 @@
 				ctx.fill();
 				ctx.restore();
 			}
-			//
-			
+
 			//Graph variables
 			let barWidth = 12 * (256/vis.Num_Samples);
 			let barSpacing = 1;
@@ -316,7 +314,7 @@
 			gradient.addColorStop(1, 'violet');
 			
 			// loop through the data and draw!
-			
+			let dataAverage = 0;
 			for(let i=0; i<data.length; i++) { 								
 				// the higher the amplitude of the sample (bin) the taller the bar
 				// remember we have to draw our bars left-to-right and top-down
@@ -347,12 +345,14 @@
 					ctx.fill();              
 					ctx.stroke();       
 					ctx.restore(); 
-				};
-				
-				
-						
+				};	
+
+				// Calculate the total of all the data
+				dataAverage += data[i];
 			}
-			
+
+			// Calculate the average of all the data
+			dataAverage /= data.length;
 			
 			if (vis.Visualizer_Type == "Lines" || vis.Visualizer_Type == "All")
 			{
@@ -382,17 +382,66 @@
 				ctx.stroke();
 				ctx.restore();
 			};
+
+			if (vis.Quadratic_Curves)
+			{
+				////
+				////Quadratic Curve Visualizer
+				////
+				ctx.save();
+				ctx.beginPath();			
+				ctx.lineWidth = 7;
+				ctx.strokeStyle = gradient;
+
+				ctx.moveTo(0, 0);
+				let ctrlX = canvas.width / 2;
+				let ctrlY = dataAverage * vis.Amplitude;
+				ctx.quadraticCurveTo(ctrlX, ctrlY, canvas.width, 0);
+				ctx.stroke();
+				
+				ctx.moveTo(0, canvas.height);
+				ctrlY = canvas.height - (dataAverage * vis.Amplitude);
+				ctx.quadraticCurveTo(ctrlX, ctrlY, canvas.width, canvas.height);
+				ctx.stroke();
+				ctx.restore();
+			};
+
+			if (vis.Bezier_Curves)
+			{
+				////
+				////Bezier Curve Visualizer
+				////
+				ctx.save();
+				ctx.beginPath();			
+				ctx.lineWidth = 7;
+				ctx.strokeStyle = gradient;
+
+				ctx.moveTo(0, 0);
+				let ctrlX = canvas.width / 4;
+				let ctrlXa = canvas.width - ctrlX;
+				let ctrlY = dataAverage * (vis.Amplitude * 8);
+				let ctrlYa = dataAverage * (vis.Amplitude * 2);
+				ctx.bezierCurveTo(ctrlX, ctrlY, ctrlXa, ctrlYa, canvas.width, 0);
+				ctx.stroke();
+				
+				ctx.moveTo(0, canvas.height);
+				ctrlY = canvas.height - (dataAverage * (vis.Amplitude * 8));
+				ctrlYa = canvas.height - (dataAverage * (vis.Amplitude * 2));
+				ctx.bezierCurveTo(ctrlX, ctrlY, ctrlXa, ctrlYa, canvas.width, canvas.height);
+				ctx.stroke();
+				ctx.restore();
+			};
 			
 			manipulatePixels();
 		};
 		
-		// HELPER
+		// Helper function for making colors
 		function makeColor(red, green, blue, alpha){
    			let color='rgba('+red+','+green+','+blue+', '+alpha+')';
    			return color;
 		};
 		
-		 // FULL SCREEN MODE
+		// FULL SCREEN MODE
 		function requestFullscreen(element) {
 			if (element.requestFullscreen) {
 			  element.requestFullscreen();
@@ -406,7 +455,7 @@
 			// .. and do nothing if the method is not supported
 		};
 		
-		//Allows for only the audio visualizer to be seen in full screen
+		// Allows for only the audio visualizer to be seen in full screen
 		function requestFullscreenOfCanvas() {
 			if (canvas.requestFullscreen) {
 			  canvas.requestFullscreen();
@@ -419,6 +468,7 @@
 			};
 			// .. and do nothing if the method is not supported
 		};
+
 		function manipulatePixels(){
 			// i) Get all of the rgba pixel data of the canvas by grabbing the
 			// ImageData Object
