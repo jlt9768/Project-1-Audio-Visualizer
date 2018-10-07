@@ -60,6 +60,8 @@
 			this.Amplitude = 1;
 			this.Tint_Color = [255,255,255];
 			this.Num_Samples = 256;
+			this.Highshelf_Filter = false;
+			this.Lowshelf_Filter = false;
 			
 			this.colorProperties = {
 				RGB: true,
@@ -116,6 +118,8 @@
 			//AudioEffects
 			let effectsA = gui.addFolder('Audio Effects');
 			let audioVolumeController = effectsA.add(vis, 'Volume', 0,1);
+			effectsA.add(vis, 'Highshelf_Filter');
+			effectsA.add(vis, 'Lowshelf_Filter');
 			
 			//Add a listner to a button on the dat.gui
 			audioVolumeController.onChange(function(){ gainNode.gain.value = vis.Volume; });
@@ -136,7 +140,7 @@
 		let canvas,ctx;
 		let maxRadius = 100;
 		let canvasW, canvasH;
-		let audioCtx, sourceNode, gainNode;
+		let audioCtx, sourceNode, gainNode, highshelfBiquadFilter, lowshelfBiquadFilter;
 		let stars = [];
 		function init(){
 			// set up canvas stuff
@@ -163,7 +167,6 @@
 			update();
 		};
 		
-		
 		function createWebAudioContextWithAnalyserNode(audioElement) {
 			
 			// create new AudioContext
@@ -171,12 +174,21 @@
 			// http://webaudio.github.io/web-audio-api/#the-audiocontext-interface
 			audioCtx = new (window.AudioContext || window.webkitAudioContext);
 			
-			// create an analyser node
+			// Create an analyser node
 			analyserNode = audioCtx.createAnalyser();
-			
+
+			// Create and set-up gain node
 			gainNode = audioCtx.createGain();
-			
-			
+			gainNode.gain.value = vis.Volume;
+
+			// Create and set-up Highshelf biquad filter
+			highshelfBiquadFilter = audioCtx.createBiquadFilter();
+			highshelfBiquadFilter.type = "highshelf";
+
+			// Create and set-up Lowshelf biquad filter
+			lowshelfBiquadFilter = audioCtx.createBiquadFilter();
+			lowshelfBiquadFilter.type = "lowshelf";
+
 			/*
 			We will request NUM_SAMPLES number of samples or "bins" spaced equally 
 			across the sound spectrum.
@@ -189,15 +201,16 @@
 			// fft stands for Fast Fourier Transform
 			analyserNode.fftSize = vis.Num_Samples;
 			
-			// this is where we hook up the <audio> element to the analyserNode
+			// This is where we hook up the <audio> element to the analyserNode
 			sourceNode = audioCtx.createMediaElementSource(audioElement); 
 			
+			// Set-up Node Connections 
 			sourceNode.connect(gainNode);
-			gainNode.connect(analyserNode);
-			
-			gainNode.gain.value = vis.Volume;
-			
-			// here we connect to the destination i.e. speakers
+			gainNode.connect(highshelfBiquadFilter);
+			highshelfBiquadFilter.connect(lowshelfBiquadFilter);
+			lowshelfBiquadFilter.connect(analyserNode);
+
+			// Here we connect to the destination i.e. speakers
 			analyserNode.connect(audioCtx.destination);
 			return analyserNode;
 		};
@@ -210,13 +223,26 @@
 		function update() { 
 			// this schedules a call to the update() method in 1/60 seconds
 			requestAnimationFrame(update);
-			//gainNode.gain.value = vis.Volume;
+
+			// Set-up highshelf and lowshelf biquad filters
+			if(vis.Highshelf_Filter){
+				highshelfBiquadFilter.frequency.setValueAtTime(1000, audioCtx.currentTime);
+				highshelfBiquadFilter.gain.setValueAtTime(25, audioCtx.currentTime);
+			}else{
+				highshelfBiquadFilter.gain.setValueAtTime(0, audioCtx.currentTime);
+			}
+			if(vis.Lowshelf_Filter){
+				lowshelfBiquadFilter.frequency.setValueAtTime(1000, audioCtx.currentTime);
+				lowshelfBiquadFilter.gain.setValueAtTime(15, audioCtx.currentTime);
+			}else{
+				lowshelfBiquadFilter.gain.setValueAtTime(0, audioCtx.currentTime);
+			}
+
 			/*
 				Nyquist Theorem
 				http://whatis.techtarget.com/definition/Nyquist-Theorem
 				The array of data we get back is 1/2 the size of the sample rate 
 			*/
-			
 			// create a new array of 8-bit integers (0-255)
 			let data = new Uint8Array(vis.Num_Samples/2); 
 			let wData = new Uint8Array(vis.Num_Samples/2); 
@@ -231,6 +257,7 @@
 				analyserNode.getByteTimeDomainData(data); // waveform data
 			}
 			analyserNode.getByteTimeDomainData(wData)
+
 			// DRAW!
 			ctx.clearRect(0,0,canvas.width,canvas.height);  
 			

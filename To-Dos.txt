@@ -1,5 +1,4 @@
 Need to do:
-- additional audio node effect - Beau
 
 
 Nice to have:
@@ -13,3 +12,4 @@ Done:
 - change up checkboxes - James 
 - Names with embedded font - Beau
 - bezier and quadratic curves - Beau
+- additional audio node effect - Beau
